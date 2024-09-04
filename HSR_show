@@ -1,0 +1,241 @@
+from APIDownload import hsr_download
+
+down=hsr_download()
+
+
+import numpy as np #배열 라이브러리
+
+import matplotlib.pyplot as plt #분포도 표출 라이브러리
+from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize #분포도 표출 색상표
+from mpl_toolkits.axes_grid1 import make_axes_locatable #분포도 색상표, 위치, 크기 조절 함수
+
+from rasterio.transform import Affine #좌표계 변환
+from rasterio.warp import calculate_default_transform, reproject, Resampling #좌표계 변환 함수
+
+import folium #지도 표출 라이브러리
+import branca.colormap as cm #지도에 색상표 표출 위한 색상표 모듈
+#from folium.plugins import MousePosition #지도에 마우스 위치를 표출하는 플러그인
+from pyproj.transformer import Transformer #점끼리 좌표계 변환
+
+
+# 기상청 레이더 좌표(2305(x)×2881(y))
+nx=2305
+ny=2881
+
+
+f_path="D:/이현지/2. 진종훈 팀장님/#2. 내배수/240904 사례집 강우사상 수집/3hrPCPH_2019071515.bin"
+
+with open(f_path, 'rb') as f:
+    file=f.read()
+
+rain_rate=np.frombuffer(file, dtype=np.int16, offset=4).astype(np.float32).reshape(ny, nx)
+
+# np.frombuffer(buffer, dtype=float, count=-1, offset=0): 버퍼에 있는 데이터를 1차원 배열로 만들어 주는 기능(바이너리 파일을 읽어오는 방법)
+# buffer: 데이터(= 바이너리 값)
+# dtype: 데이터 타입
+# count: 읽어올 데이터 수 (-1 = 전체 값)
+# offset: 바이너리 값을 읽어올 시작 위치 (헤더 제외 활용)
+
+# *.astype(): 데이터 타입 변경 (배열의 실제 값은 100을 나누어 계산한 소수값, 부동소수점으로 변환)
+# *.reshape(): 배열 형태 변환
+
+
+# 관측 반경 바깥 영역 나타내는 마스크 정의
+null=(rain_rate <= -30000)
+# 관측 반경 바깥 영역 NaN값 변환
+rain_rate[null]=np.nan
+
+# 배열 값/100 (/= 할당연산자)
+rain_rate /= 100
+
+rain_rate.shape
+
+
+colormap_rain=ListedColormap(np.array([
+    [250,250,250], [0,200,255], [0,155,245], [0,74,245], #하늘색
+    [0,255,0], [0,190,0], [0,140,0], [0,90,0], #초록색
+    [255,255,0], [255,220,31], [249,205,0], [224,185,0], [204,170,0], #노랑색
+    [255,102,0], [255,50,0], [210,0,0], [180,0,0], #빨간색
+    [224,169,255], [201,105,255], [179,41,255], [147,0,228], #보라색
+    [179,180,222], [76,78,177], [0,3,144], [51,51,51] #파란색
+])/255)
+
+# NaN 값 = 투명 (RGBA 중 A = 0)
+colormap_rain.set_bad([0,0,0,0]) #*.set_bad: NaN 값 = 유효하지 않은 값 처리 색
+
+# 색상이 나타내는 범위
+bounds=np.array([
+    0, 0.1, 0.5, 1, #하늘색
+    2, 3, 4, 5, #초록색
+    6, 7, 8, 9, 10, #노랑색
+    15, 20, 25, 30, #빨간색
+    40, 50, 60, 70, #보라색
+    90, 110, 150 #파란색
+])
+
+# 색상 수와 값 범위 맞추기
+norm=BoundaryNorm(boundaries=bounds, ncolors=len(colormap_rain.colors))
+
+colormap_rain
+
+
+# 강수세기 배열 각 값을 색상표의 색이 나타내는 인덱스로 매핑
+colored_array=BoundaryNorm(boundaries=bounds, ncolors=len(colormap_rain.colors))(rain_rate)
+# 매핑된 각 인덱스 범위(0~25)를 정규화(0~1)
+colored_array=Normalize(0, len(colormap_rain.colors))(colored_array)
+# 정규화를 통해 잃게 된 투명색 범위 다시 지정
+colored_array[null]=np.nan
+# 마지막으로 색상표의 색상으로 배열 매핑
+# 이때 배열 형태 (행 갯수, 열 갯수) → (행 갯수, 열 갯수, RGBA) 변환
+colored_array=(colormap_rain(colored_array)*255).astype(np.uint8) #uint8: 0~255
+
+
+# 분포도 표시 범위 (2칸 간격)
+ticks=bounds[:]
+# 분포도 크기
+fig, ax = plt.subplots(1,1,figsize=(5,5))
+# 분포도 제목
+# ax.set_title('Colored array')
+# 회색 배경
+ax.set_facecolor('#cccccc')
+# 색상표 크기, 위치
+divider=make_axes_locatable(ax)
+cax=divider.append_axes('right', size='5%', pad=0)
+# 배열을 해당 크기에 맞춰 그리기
+im=ax.imshow(colored_array, origin='lower', cmap=colormap_rain, norm=norm)
+# 색상표에 표시될 글자 크기 및 제목
+cbar=fig.colorbar(im, cax=cax, ticks=ticks)
+cbar.ax.tick_params(labelsize=8)
+cbar.ax.set_title('mm/3hr', fontsize=8)
+
+plt.show()
+
+
+source_width=nx
+source_height=ny
+source_center_x=1121 #중심점 좌표
+source_center_y=1681 #중심점 좌표
+source_resolution=500 #공간해상도(m)
+
+# 변환 전 좌표계 proj.4 형태의 문자열로 정의
+# 투영법(Projection)은 LCC
+# LCC 좌표계 정의에 필요한 위도 선 2개(lat_1, lat_2), 중심 위경도(lat_0, lon_0) 정의
+# 좌표계 x, y는 각각 오른쪽, 위로 증가하는 방향(False easting, False northing)
+# 지구 타원체 WGS84 정의
+# 좌표계가 사용하는 단위 m로 정의
+source_crs = "+proj=lcc +lat_1=30 +lat_2=60 +lat_0=38 +lon_0=126 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs"
+
+# Affine Transform Matrix: 이미지(배열) 행렬을 LCC 좌표계 좌표로 변환하기 위한 변환 행렬
+# 변환 행렬은 이미지의 중심점을 (0, 0) 위치로 이동시킨 후(Translation), 각 이미지 픽셀의 실제 크기(500m)를 나타내기 위해 크기를 x, y로 500배로 키움(Scale)
+# 이때, 행렬의 곱하는 순서에 유의 (AB != BA)
+source_transform = Affine.scale(source_resolution, source_resolution) * Affine.translation(-source_center_x, -source_center_y)
+
+
+# 변환 행렬을 거친 이미지가 나타내는 경계
+source_bounds = {
+    'left': -source_center_x * source_resolution,
+    'bottom': (source_height - source_center_y) * source_resolution,
+    'right': (source_width - source_center_x) * source_resolution,
+    'top': -source_center_y * source_resolution
+}
+
+# 변환 후 이미지의 변환 행렬과 너비와 높이 계산
+dest_transform, dest_width, dest_height = calculate_default_transform(
+    src_crs=source_crs,
+    dst_crs='EPSG:3857',
+    width=source_width,
+    height=source_height,
+    **source_bounds,
+)
+
+
+# 변환 후 이미지가 담길 빈 배열
+converted_array = np.ones((dest_height, dest_width, 4), dtype=np.uint8)
+
+# RGBA 각 채널에 대한 좌표계 변환
+# resampling 기법으로 가까운 값을 선택하는 nearest 선택
+for i in range(4):
+    reproject(
+        source=colored_array[:, :, i],
+        destination=converted_array[:, :, i],
+        src_transform=source_transform,
+        src_crs=source_crs,
+        dst_transform=dest_transform,
+        dst_crs='EPSG:3857',
+        resampling=Resampling.nearest,
+    )
+
+
+fig, ax = plt.subplots(1,1,figsize=(5,5))
+#ax.set_title('Converted array')
+ax.set_facecolor('#cccccc')
+
+divider=make_axes_locatable(ax)
+cax=divider.append_axes('right', size='5%', pad=0)
+im=ax.imshow(converted_array, cmap=colormap_rain, norm=norm)
+cbar=fig.colorbar(im, cax=cax, ticks=ticks)
+cbar.ax.tick_params(labelsize=8)
+cbar.ax.set_title('mm/3hr', fontsize=8)
+
+plt.show()
+
+
+# EPSG:3857 → EPSG:4326
+import folium.map
+import folium.raster_layers
+
+
+degree_transformer=Transformer.from_crs('EPSG:3857', 'EPSG:4326')
+
+# 800×800 지도 생성
+fig=folium.Figure(width=800, height=800)
+# 지도 중심 및 나타낼 영역
+map=folium.Map(
+    location=[38,126],
+    zoom_start=6, #확대 정도 (최대 18)
+    min_zooms=6, 
+    min_lat=28,
+    max_lat=43,
+    min_lon=116,
+    max_lon=135,
+    max_bounds=True
+).add_to(fig)
+
+# 지도 색상표 추가
+map.add_child(cm.StepColormap(
+    [tuple(i) for i in colormap_rain.colors],
+    vmin=bounds[0], vmax=bounds[-1], tick_labels=[], caption='mm/3hr'
+))
+
+# 변환된 이미지 지도 위 표출
+folium.raster_layers.ImageOverlay(
+    image=converted_array,
+    name='rain_rate',
+    opacity=0.4, #불투명도
+    bounds=[
+        degree_transformer.transform(*dest_transform.__mul__((0, dest_height))),
+        degree_transformer.transform(*dest_transform.__mul__((dest_width, 0)))
+    ],
+    zindex=1
+).add_to(map)
+
+fig
+
+
+# 원하는 지점의 강우량 추출
+
+# 위경도 좌표계 → LCC 좌표계 변환
+lcc_transformer=Transformer.from_crs('EPSG:4326', source_crs)
+
+# 원하는 지점 위경도
+target_lat=37.2667
+target_lon=127.1039
+
+index_col, index_row = source_transform.__invert__().__mul__(
+    lcc_transformer.transform(target_lat, target_lon)
+)
+
+print(
+    f"위도 {target_lat}, 경도 {target_lon} 지점의 강수 세기는 "
+    f"{rain_rate[round(index_row), round(index_col)]:.02f}mm/3hr 입니다."
+)
