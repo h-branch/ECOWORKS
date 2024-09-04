@@ -27,7 +27,7 @@ def hsr_download():
             'authKey': Key
         }
 
-        _response=requests.get(hsr_url, _option, Key)
+        _response=requests.get(hsr_url, _option)
 
         _f_path=f'D:/이현지/2. 진종훈 팀장님/#2. 내배수/240904 사례집 강우사상 수집/3hrPCPH_{_temp}.bin' #저장 경로
         with open(_f_path, 'wb') as _f:
@@ -55,7 +55,7 @@ def asos_download():
             'authKey': Key
         }
 
-        _response=requests.get(asos_url, _option, Key)
+        _response=requests.get(asos_url, _option)
 
         _f_path=f'C:/Users/lhj15/OneDrive/바탕 화면/study/240804 API data/Data/API{save}.txt'
         with open(_f_path,'wb') as _f:
