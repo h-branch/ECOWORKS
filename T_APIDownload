@@ -23,7 +23,8 @@ def hsr_download():
             'obs': 'ECHO',
             'acc': '180', #누적기간(분)
             'map': 'HB', #한반도(기본)
-            'disp': 'B'
+            'disp': 'B',
+            'authKey': Key
         }
 
         _response=requests.get(hsr_url, _option, Key)
@@ -51,6 +52,7 @@ def asos_download():
             # 하기 옵션은 기상청 API허브 인자 참조
             'stn': '0', #전 지점
             'help': '0', #도움말 없음
+            'authKey': Key
         }
 
         _response=requests.get(asos_url, _option, Key)
