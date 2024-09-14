@@ -1,0 +1,117 @@
+import os
+import sys
+
+import requests
+
+from datetime import datetime, timedelta
+
+def MakeDir(_dir):
+
+    _exist = os.path.isdir(_dir)
+
+    if not _exist : os.system('mkdir -p ' + _dir)
+
+    return
+
+def FileEmpty(_file, _opt=True):
+
+    _exist = os.path.isfile(_file)
+
+    if _exist :
+       _fsize = os.path.getsize(_file)
+    else :
+       _fsize = 0
+
+    if _opt : print('File = %s %s %s' % (_file,str(_exist),_fsize))
+
+    return _exist, _fsize
+
+def Download_Api(_url, _file):
+
+    with open(_file, 'wb') as _f:
+        _response = requests.get(_url)
+        _f.write(_response.content)
+
+    return
+
+def Str2Date(_date, _fmt='%Y%m%d%H%M') :
+
+    _output = datetime.strptime(str(_date),_fmt)
+
+    try :
+        _output = datetime.strptime(str(_date),_fmt)
+    except ValueError :
+        _output = _date
+
+    return _output
+
+def Date2Str(_date, _fmt='%Y%m%d%H%M') :
+
+    try :
+        _output = _date.strftime(_fmt)
+    except ValueError :
+        _output = _date
+
+    return _output
+
+def CalcTime_Mins(_date, _int):
+
+    _time = Str2Date(_date=_date)
+
+    _output = _time + timedelta(minutes=_int)
+    _output = Date2Str(_date=_output)
+
+    del _time
+
+    return _output
+
+# Must be set to YYYYMMDDHHMM KST
+run_time = "202307120050"
+# Data acquisition period = 60(M)*24(H)*122(D)
+int_time = 10
+# Accumulated rainfall time = minute
+inv_time = 10
+aws_file = "./AWS/YY/MM/DD/AWS_TIME.txt"
+
+# Set authkey
+key = "dfSeNZj7T7G0njWY-y-x4A"
+url_path = "https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min?" \
+           "tm2=TIME&stn=0&disp=0&help=1&authKey=%s" % (key)
+
+# Set start/end time
+st_time = CalcTime_Mins(_date=run_time, _int=-1*int_time)
+
+# Obtaining AWS observation data
+print("-"*80)
+print(" 1.Obtaining AWS observation data")
+print("       start time : %s"%( st_time))
+print("       end   time : %s"%(run_time))
+print("")
+
+for nt in range(int(int_time/inv_time)+1) :
+    itime = CalcTime_Mins(_date=run_time, _int=-1*nt*inv_time)
+
+    url = url_path.replace('TIME',itime)
+
+    yy = itime[ :4]
+    mm = itime[4:6]
+    dd = itime[6:8]
+
+    ipath = os.path.dirname(aws_file)
+    ipath = ipath.replace('YY',yy)\
+                 .replace('MM',mm)\
+                 .replace('DD',dd)
+
+    MakeDir(_dir=ipath)
+    ifile = aws_file.replace('YY',yy)\
+                    .replace('MM',mm)\
+                    .replace('DD',dd)\
+                    .replace('TIME',itime)
+
+    exists, sizes = FileEmpty(_file=ifile, _opt=True)
+    if exists and sizes == 94936 : continue
+
+    # Call the file download function.
+    Download_Api(_url=url, _file=ifile)
+
+print("")
