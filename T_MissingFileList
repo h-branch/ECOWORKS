@@ -1,0 +1,54 @@
+import numpy as np
+import os
+import re
+from datetime import datetime, timedelta
+
+
+#내 파일 리스트
+f_path='D:/240716_HSR_portal(2020)'
+f_list=np.array([os.listdir(f_path)])
+col_list=f_list.T
+print(col_list)
+print(col_list.shape)
+
+
+#이상적인 파일 리스트
+
+#타임스탬프 생성 함수
+def idle(start_t, end_t, interval_t):
+    f_names=[]
+    current_t = start_t
+    while current_t <= end_t:
+        timestamp=current_t.strftime('%Y%m%d%H%M')
+        f_name=f'RDR_CMP_HSR_PUB_{timestamp}.bin.gz'
+        f_names.append(f_name)
+        current_t += timedelta(minutes=interval_t)
+    return f_names
+
+start_t=datetime.strptime('202001010000', '%Y%m%d%H%M')
+end_t=datetime.strptime('202012312355', '%Y%m%d%H%M')
+
+expected_f=idle(start_t,end_t,5)
+
+idle_array=np.array(expected_f)
+col_idle=idle_array.reshape(-1,1)
+
+print(col_idle)
+print(col_idle.shape)
+
+
+kma=col_idle.flatten()
+me=col_list.flatten()
+
+missing=np.setdiff1d(kma, me)
+
+import pandas as pd
+
+
+missing_series=pd.Series(missing, name='missing val')
+pd.set_option('display.max_rows', None)
+print(missing_series)
+print(missing_series.size)
+#np.set_printoptions(threshold=np.inf, linewidth=np.inf)
+#print(missing)
+#print(missing.size)
