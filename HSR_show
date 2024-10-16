@@ -126,3 +126,91 @@ ax.set_title('Radar Data Visualization')
 
 # 플롯 보여주기
 plt.show()
+
+
+#5-1. 피해지점 표시 맵 생성
+fig = plt.figure(figsize=(10, 7.8))
+ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+
+# coastline 추가
+ax.coastlines()
+
+# 한반도 범위 설정 - 경계: W 124.19583333, E 131.87222222, S 33.11111111, N 43.00972222
+ax.set_extent([121.5, 132.5, 30.9, 41.], crs=ccrs.PlateCarree())
+
+# 레이더 데이터 시각화 (contourf 사용)
+contour = ax.contourf(location_data['longitude'].values.reshape(ny, nx),
+                       location_data['latitude'].values.reshape(ny, nx),
+                       rdr, cmap=colormap_rain, levels=bounds, extend='both',
+                       transform=ccrs.PlateCarree(), norm=norm)
+
+# 중심 좌표
+center_lon = loc_df.iloc[0]['lon']
+center_lat = loc_df.iloc[0]['lat']
+ax.scatter(center_lat, center_lon, color='black', marker='x', s=50, label='피해 지역', linewidths=3, zorder=5)
+
+# 범례 추가
+ax.legend(facecolor='white', edgecolor='black', fontsize='large', framealpha=1)
+
+# 색상 막대 추가
+cbar = plt.colorbar(contour, ax=ax, ticks=ticks, orientation='vertical', pad=0.02, extend='both', extendrect=True)
+
+# 제목 추가
+ax.set_title('Radar Data Visualization', fontweight='bold')
+
+# 플롯 보여주기
+plt.show()
+
+
+#6. 피해지점 ZOOM
+# 한글 폰트 설정
+plt.rc('font', family='Malgun Gothic')  # Windows에서는 Malgun Gothic 사용
+# 또는 다른 폰트를 사용할 수 있습니다. (예: 'AppleGothic' for Mac)
+
+# 중심 좌표
+center_lon = loc_df.iloc[0]['lat']
+center_lat = loc_df.iloc[0]['lon']
+
+# 주변 범위 (155 km)
+radius = 100 * 1000  # km를 m로 변환
+
+# 지구의 반지름 (m)
+earth_radius = 6371000
+
+# 경도, 위도 범위 계산
+delta_lon = np.degrees(radius / (earth_radius * np.cos(np.radians(center_lat))))
+delta_lat = np.degrees(radius / earth_radius)
+
+lon_min = center_lon - delta_lon
+lon_max = center_lon + delta_lon
+lat_min = center_lat - delta_lat
+lat_max = center_lat + delta_lat
+
+# 새로운 맵 생성
+fig = plt.figure(figsize=(10, 7))
+ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+
+# coastline 추가
+ax.coastlines()
+
+# 축 범위 설정
+ax.set_xlim(lon_min, lon_max)
+ax.set_ylim(lat_min, lat_max)
+
+# 레이더 데이터 시각화 (contourf 사용)
+contour = ax.contourf(location_data['longitude'].values.reshape(ny, nx),
+                       location_data['latitude'].values.reshape(ny, nx),
+                       rdr, cmap=colormap_rain, levels=bounds, extend='both',
+                       transform=ccrs.PlateCarree(), norm=norm)
+
+ax.scatter(center_lon, center_lat, color='black', marker='x', s=100, label='피해 지역', linewidths=3)
+ax.legend()
+
+# 색상 막대 추가
+cbar = plt.colorbar(contour, ax=ax, ticks=ticks, orientation='vertical', pad=0.02, extend='both', extendrect=True)
+
+# 제목 추가
+ax.set_title('Radar Data Visualization around (127.1039, 37.2667)')
+
+# 플롯 보여주기
+plt.show()
