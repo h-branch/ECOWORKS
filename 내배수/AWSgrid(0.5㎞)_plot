@@ -67,7 +67,7 @@ coordinates = [(lat, lon) for lat in latitudes for lon in longitudes]
 coordinates
 #print("Number of coordinates:", len(coordinates))
 
-1361*1361
+#1361*1361
 
 
 #3. DataFrame 생성
