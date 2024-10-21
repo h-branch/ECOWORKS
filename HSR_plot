@@ -123,7 +123,7 @@ colored_array=(colormap_rain(colored_array)*255).astype(np.uint8)
 ticks=bounds[:]
 
 
-#5. 시도 경계 추가
+#5. HSR 강우강도 표출
 fig = plt.figure(figsize=(10, 7.8))
 ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
 
@@ -139,7 +139,7 @@ gl.top_labels = False
 gl.right_labels = False
 
 # 시도 경계 그리기
-sig.boundary.plot(ax=ax, edgecolor='black', linewidth=1, zorder=3)
+#sig.boundary.plot(ax=ax, edgecolor='black', linewidth=1, zorder=3)
 
 # 레이더 데이터 시각화
 contour = ax.contourf(location_data['longitude'].values.reshape(ny, nx),
@@ -162,7 +162,7 @@ cbar = plt.colorbar(contour, ax=ax, ticks=ticks, orientation='vertical', pad=0.0
 plt.show()
 
 # 경계 확인
-print(sig.total_bounds)
+#print(sig.total_bounds)
 
 
 #6. 피해지점 ZOOM
