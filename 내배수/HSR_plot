@@ -83,7 +83,7 @@ print(lat_lon)
 location_data = pd.DataFrame({
     'latitude': lat.flatten(),
     'longitude': lon.flatten(),
-    'rdr_value': z_r.flatten()  # 레이더 데이터를 함께 포함
+    'rdr_value': rain_val.flatten()  # 레이더 데이터를 함께 포함
 })
 
 location_data
