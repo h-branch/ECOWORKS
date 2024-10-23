@@ -1,0 +1,119 @@
+from datetime import datetime, timedelta
+
+def Str2Date(_date, _fmt='%Y%m%d%H%M') :
+
+    _output = datetime.strptime(str(_date),_fmt)
+
+    try :
+        _output = datetime.strptime(str(_date),_fmt)
+    except ValueError :
+        _output = _date
+
+    return _output
+def Date2Str(_date, _fmt='%Y%m%d%H%M') :
+
+    try :
+        _output = _date.strftime(_fmt)
+    except ValueError :
+        _output = _date
+
+    return _output
+def CalcTime_Mins(_date, _int):
+
+    _time = Str2Date(_date=_date)
+
+    _output = _time + timedelta(minutes=_int)
+    _output = Date2Str(_date=_output)
+
+    del _time
+
+    return _output
+
+def ReadData(_list) :
+
+    _nlat,_nlon = 2881,2305
+    _data = np.zeros((_nlat*_nlon))
+
+    for _nt, _file in enumerate(_list) :
+        #print(_file)
+        _temp = np.fromfile(_file,dtype=np.int16)
+        _temp = _temp / 100.
+        _temp = np.where(_temp > -0.1, _temp, np.nan)
+
+        _data += _temp
+        print(_nt+1, _file, np.nanmin(_temp), np.nanmax(_temp)) #, np.where(_temp == np.nanmax(_temp)) )
+
+    print(np.nanmin(_data), np.nanmax(_data))
+
+    return _data
+
+mtime = "201907142100"
+atime = "201907151530"
+yy = mtime[ 0: 4]
+mm = mtime[ 4: 6]
+dd = mtime[ 6: 8]
+hh = mtime[ 8:10]
+
+ddir = 'D:/이현지/2. 진종훈 팀장님/#2. 내배수/DAOU/LDPS/%s/%s/%s/%s'%(yy,mm,dd,hh)
+file_list = ["%s/rain_fcst_%s_%04d.bin" %(ddir,mtime,nt) for nt in range(0,1441,10)]
+#print(file_list)
+
+for nt, ifile in enumerate(file_list) :
+    #print(nt, ifile)
+
+    stmp = ifile.split('_')
+
+    idate = stmp[-2]
+    iftim = int(stmp[-1][:-4])
+    #print(idate, iftim)
+
+    ctime = CalcTime_Mins(_date=idate,_int=iftim)
+    
+    #print(idate, "%04d"%(iftim), Str2Date(_date=ctime))
+    if ctime == atime : break
+
+nt += 1
+print(nt, ifile)
+
+et  = nt
+st1 = et - 6
+st2 = et - 18
+st3 = et - 36
+h0_hr1_date = file_list[st1:et]
+h0_hr3_date = file_list[st2:et]
+h0_hr6_date = file_list[st3:et]
+#print(h0_hr1_date)
+
+et  = nt - 6
+st1 = et - 6
+st2 = et - 18
+st3 = et - 36
+h1_hr1_date = file_list[st1:et]
+h1_hr3_date = file_list[st2:et]
+h1_hr6_date = file_list[st3:et]
+#print(h1_hr1_date)
+
+et  = nt - 12
+st1 = et - 6
+st2 = et - 18
+st3 = et - 36
+h2_hr1_date = file_list[st1:et]
+h2_hr3_date = file_list[st2:et]
+h2_hr6_date = file_list[st3:et]
+
+et  = nt - 18
+st1 = et - 6
+st2 = et - 18
+st3 = et - 36
+h3_hr1_date = file_list[st1:et]
+h3_hr3_date = file_list[st2:et]
+h3_hr6_date = file_list[st3:et]
+
+
+h0_hr1_data = ReadData(_list=h0_hr1_date)
+h0_hr3_data = ReadData(_list=h0_hr3_date)
+h0_hr6_data = ReadData(_list=h0_hr6_date)
+
+#print(np.nanmin(h0_hr1_data), np.nanmax(h0_hr1_data))
+#print(np.nanmin(h0_hr3_data), np.nanmax(h0_hr3_data))
+#print(np.nanmin(h0_hr6_data), np.nanmax(h0_hr6_data))
