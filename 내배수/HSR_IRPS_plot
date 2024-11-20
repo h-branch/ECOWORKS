@@ -10,27 +10,33 @@ import pyproj
 location=pd.read_csv('D:/이현지/2. 진종훈 팀장님/#2. 내배수/241008 피해지점 및 인근 관측소 매칭/location.csv', encoding='euc-kr')
 loc_df=pd.DataFrame(location)
 loc_df.drop(columns=loc_df.columns[7:11], inplace=True)
-loc_df.rename(columns={'Unnamed: 5':'lon', 'Unnamed: 6':'lat'}, inplace=True)
-loc_df=loc_df[['넘버링', '연도', '사상', '대상지', '피해지역', 'lat', 'lon']]
+loc_df.rename(columns={'Unnamed: 5':'lat', 'Unnamed: 6':'lon'}, inplace=True)
 loc_df
 
 
-#1. 데이터 전처리
+#1-1. HSR 데이터 전처리
 f_path='D:/이현지/2. 진종훈 팀장님/#2. 내배수/241008 피해지점 및 인근 관측소 매칭/241010 사례집 다운로드/1hrPCPH_2019071515.bin'
-
 nx, ny = 2305, 2881
-
 with open(f_path, 'rb') as f:
     file=f.read()
-
 rdr=np.frombuffer(file, dtype=np.int16, offset=4).astype(np.float32).reshape(ny, nx)
-
 null=(rdr<=-20000)
 rdr[null]=np.nan
 rdr /= 100
 rdr.shape
 
 
+#1-2. IRPS 데이터 전처리
+f_path='D:/이현지/2. 진종훈 팀장님/#2. 내배수/241115 IRPS 결과/Downloads/rain_fcst_202309201600_acc_1h.bin' #ai-hqpe
+nx, ny = 2305, 2881
+with open(f_path, 'rb') as f:
+    file=f.read()
+rdr=np.frombuffer(file, dtype=np.int16).astype(np.float32).reshape(ny, nx)
+rdr /= 100
+rain_rate=np.where(rdr>0.21, rdr, -9999.) #1hr=0.03, 3hr=0.10, 6hr=0.21
+rain_rate.shape
+
+[수정 필요]
 #1-1. 반사도-강우강도 변환
 ZRa = 200.
 ZRb = 1.6
