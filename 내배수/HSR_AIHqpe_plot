@@ -154,7 +154,7 @@ gl=ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, colo
 gl.top_labels = False  # 위쪽 레이블 숨기기
 gl.right_labels = False  # 오른쪽 레이블 숨기기
 # 레이더 데이터 시각화 (contourf 사용)
-contour = ax.contourf(lon, lat
+contour = ax.contourf(lon, lat,
                       #rain_val, #HSR
                       #rain_rate, #AI-HQRE
                        cmap=colormap_rain, levels=bounds, extend='both',
