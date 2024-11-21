@@ -107,7 +107,7 @@ gl.top_labels = False
 gl.right_labels = False
 # 레이더 데이터 시각화
 contour = ax.contourf(lon, lat,
-                      #rain_val, #HSR
+                      rain_val, #HSR
                       #rain_rate, #AI-HQRE
                        cmap=colormap_rain, levels=bounds, extend='both',
                        transform=ccrs.PlateCarree(), norm=norm)
